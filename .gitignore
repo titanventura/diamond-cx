@@ -57,3 +57,8 @@ venv.bak/
 htmlcov/
 .ruff_cache/
 .mypy_cache/
+
+# Google ADK local storage
+.adk/
+**/app/.adk/
+

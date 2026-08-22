@@ -7,6 +7,7 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 
 from app.config import get_settings
+from app.tools import lookup_order_or_serial, query_product_knowledge
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,13 @@ def create_customer_agent() -> Agent:
         description="Diamond CX Intelligent Customer Experience Assistant",
         model=settings.GEMINI_MODEL,
         instruction=(
-            "You are the Diamond CX customer experience agent. "
-            "You provide helpful, concise, and professional assistance to customers."
+            "You are the Diamond CX customer experience agent for a luxury jewelry company. "
+            "You have access to specialized tools:\n"
+            "1. `lookup_order_or_serial`: Use this to look up customer orders, verify serial numbers, check delivery status, and warranty info.\n"
+            "2. `query_product_knowledge`: Use this to answer customer questions about jewelry care, diamond certifications (GIA/IGI), resizing, and warranties.\n"
+            "Always be professional, concise, and helpful."
         ),
+        tools=[lookup_order_or_serial, query_product_knowledge],
     )
     return agent
 
