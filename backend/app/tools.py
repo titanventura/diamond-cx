@@ -8,6 +8,17 @@ from typing import Any
 # Fake Orders Database across various dates
 MOCK_ORDERS: list[dict[str, Any]] = [
     {
+        "order_id": "ORD-2026-1002",
+        "order_date": "2026-01-16",
+        "customer_name": "Aswath S",
+        "product_name": "A keyboard and mouse",
+        "serial_number": "SN-KBM-8821-PT",
+        "price": "$14,200",
+        "status": "Delivered",
+        "delivery_date": "2026-01-19",
+        "warranty_status": "Active (Expires 2028-01-15)",
+    },
+    {
         "order_id": "ORD-2026-1001",
         "order_date": "2026-01-15",
         "customer_name": "Aswath S",
@@ -98,21 +109,27 @@ def lookup_order_or_serial(search_query: str) -> dict[str, Any]:
             "orders": MOCK_ORDERS,
         }
 
+    query_tokens = [w for w in query.replace("-", " ").replace(",", " ").split() if len(w) > 2]
+
     matched = []
     for order in MOCK_ORDERS:
-        if (
-            query in order["order_id"].lower()
-            or query in order["serial_number"].lower()
-            or query in order["customer_name"].lower()
-            or query in order["product_name"].lower()
-        ):
+        order_str = (
+            f"{order['order_id']} {order['serial_number']} "
+            f"{order['customer_name']} {order['product_name']}"
+        ).lower()
+        # Direct substring match
+        if query in order_str:
+            matched.append(order)
+            continue
+        # Keyword token overlap match (e.g., 'keyboard mouse combo' matching 'A keyboard and mouse')
+        if any(token in order_str for token in query_tokens):
             matched.append(order)
 
     if not matched:
         return {
             "found": False,
-            "message": f"No orders or serial numbers matching '{search_query}'. Available orders range from ORD-2026-1001 to ORD-2026-1192.",
-            "sample_available_serial_numbers": [o["serial_number"] for o in MOCK_ORDERS],
+            "message": f"No orders or serial numbers matching '{search_query}'.",
+            "available_orders_summary": [f"{o['order_id']} - {o['product_name']}" for o in MOCK_ORDERS],
         }
 
     return {

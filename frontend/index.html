@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diamond CX | Real-time Multimodal Live Concierge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="logo-gem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="6 3 18 3 22 9 12 22 2 9 6 3"></polygon>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">DIAMOND CX <span>LIVE</span></h1>
+          <p class="brand-subtitle">Multimodal Concierge &bull; Gemini 3.1 Live</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="status-badge disconnected" id="connectionBadge">
+          <span class="status-dot"></span>
+          <span class="status-text" id="statusText">Offline</span>
+        </div>
+
+        <div class="config-pill">
+          <label for="voiceSelect">Voice:</label>
+          <select id="voiceSelect" class="styled-select">
+            <option value="Puck" selected>Puck (Warm)</option>
+            <option value="Aoede">Aoede (Refined)</option>
+            <option value="Charon">Charon (Authoritative)</option>
+            <option value="Kore">Kore (Soft)</option>
+            <option value="Fenrir">Fenrir (Deep)</option>
+          </select>
+        </div>
+
+        <div class="config-pill">
+          <label for="modalitySelect">Output:</label>
+          <select id="modalitySelect" class="styled-select">
+            <option value="AUDIO" selected>Audio + Voice</option>
+            <option value="TEXT">Text Only</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-layout">
+      <!-- Left Column: Multimodal Feeds & Controls -->
+      <section class="left-panel">
+        <!-- Video Camera Viewport -->
+        <div class="glass-card video-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 7l-7 5 7 5V7z"></path>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+              <span>Live Camera Stream</span>
+            </div>
+            <div class="camera-indicator" id="cameraIndicator">
+              <span class="rec-dot"></span>
+              <span class="rec-label">STREAMING 1 FPS</span>
+            </div>
+          </div>
+
+          <div class="video-container">
+            <video id="webcamVideo" autoplay playsinline muted></video>
+            <div class="video-placeholder" id="videoPlaceholder">
+              <div class="placeholder-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M23 7l-7 5 7 5V7z"></path>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+              </div>
+              <p>Camera is currently standby</p>
+              <button class="btn btn-secondary btn-sm" id="btnToggleCameraPrompt">Enable Camera</button>
+            </div>
+            <div class="camera-hud">
+              <span class="hud-tag">Gemini Vision Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Visualizer Waveform -->
+        <div class="glass-card visualizer-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+              </svg>
+              <span>Voice Activity &amp; Live Spectrum</span>
+            </div>
+            <span class="model-badge">16kHz PCM</span>
+          </div>
+
+          <div class="visualizer-container">
+            <canvas id="visualizerCanvas" width="480" height="70"></canvas>
+            <div class="volume-bar-container">
+              <div class="volume-bar-fill" id="volumeBarFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Controls Bar -->
+        <div class="glass-card controls-card">
+          <div class="controls-grid">
+            <button class="btn btn-primary btn-large" id="btnConnect">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14"></path>
+                <path d="M12 5l7 7-7 7"></path>
+              </svg>
+              <span id="btnConnectText">Start Live Session</span>
+            </button>
+
+            <div class="button-group">
+              <button class="btn btn-icon" id="btnToggleMic" title="Mute / Unmute Microphone" disabled>
+                <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                </svg>
+              </button>
+
+              <button class="btn btn-icon" id="btnToggleCamera" title="Start / Stop Camera Video" disabled>
+                <svg id="cameraIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 7l-7 5 7 5V7z"></path>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+              </button>
+
+              <button class="btn btn-icon" id="btnInterrupt" title="Interrupt Agent Speech" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Test Actions -->
+          <div class="quick-prompts">
+            <span class="quick-title">Quick Inquiries:</span>
+            <button class="chip" data-prompt="Pull up the order details for the keyboard and mouse combo I am showing on camera.">Keyboard & Mouse Order</button>
+            <button class="chip" data-prompt="Can you look up order ORD-2026-1001 for Aswath?">Order ORD-2026-1001</button>
+            <button class="chip" data-prompt="What are the care and certification details for a Solitaire Diamond Ring?">Solitaire Diamond Care</button>
+            <button class="chip" data-prompt="Look at what I'm showing on the camera. What item is this?">Inspect Camera Item</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Live Conversation & Tool Events -->
+      <section class="right-panel">
+        <div class="glass-card feed-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Live Interaction &amp; Tool Feed</span>
+            </div>
+            <button class="btn btn-sm btn-ghost" id="btnClearFeed">Clear Log</button>
+          </div>
+
+          <div class="feed-content" id="feedContent">
+            <!-- Welcome message -->
+            <div class="message-bubble system-message">
+              <div class="msg-header">
+                <span class="msg-sender">SYSTEM CONCIERGE</span>
+                <span class="msg-time">Ready</span>
+              </div>
+              <div class="msg-body">
+                Welcome to <strong>Diamond CX Live</strong>. Click <em>Start Live Session</em> to begin real-time voice and video consultation. You can speak naturally, hold jewelry pieces to your camera, or type inquiries below.
+              </div>
+            </div>
+          </div>
+
+          <!-- Text Input Bar -->
+          <div class="chat-input-bar">
+            <input type="text" id="textInput" placeholder="Type a message or order query (e.g. Check SN-SOL-8821-PT)..." disabled>
+            <button class="btn btn-primary btn-icon" id="btnSendText" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

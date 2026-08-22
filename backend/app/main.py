@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
+from app.live_agent import live_agent_runner
+from app.live_routes import live_websocket_endpoint
 from app.routes import router as api_router
 
 # Configure basic structured logging
@@ -22,13 +24,14 @@ logger = logging.getLogger("diamond_cx.backend")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application startup and shutdown lifespan events."""
     logger.info(
-        "Starting %s v%s in %s mode",
+        "Starting %s v%s in %s mode (Live Model: %s)",
         settings.PROJECT_NAME,
         settings.VERSION,
         settings.ENVIRONMENT,
+        settings.GEMINI_LIVE_MODEL,
     )
     yield
-    logger.info("Shutting down %s", settings.PROJECT_NAME)
+    logger.info("Shutting down %s and cleaning active Live sessions...", settings.PROJECT_NAME)
 
 
 def create_app() -> FastAPI:
@@ -36,7 +39,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
         version=settings.VERSION,
-        description="Production-ready backend API service with Google Agent Development Kit (ADK)",
+        description="Production-ready backend API service with Google Agent Development Kit (ADK) and Gemini Live Multimodal Streaming",
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
@@ -67,6 +70,9 @@ def create_app() -> FastAPI:
     # Mount API Router under prefix
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
+    # Convenience root websocket alias (e.g. ws://localhost:8000/ws/{user_id}/{session_id})
+    app.add_api_websocket_route("/ws/{user_id}/{session_id}", live_websocket_endpoint)
+
     # Convenience root endpoint
     @app.get("/", tags=["System"])
     async def root() -> dict[str, str]:
@@ -75,6 +81,8 @@ def create_app() -> FastAPI:
             "version": settings.VERSION,
             "docs": "/docs",
             "health": f"{settings.API_V1_STR}/health",
+            "live_info": f"{settings.API_V1_STR}/live/info",
+            "live_websocket": "/ws/{user_id}/{session_id}",
         }
 
     return app

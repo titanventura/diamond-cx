@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.agent import agent_runner, is_api_key_configured
 from app.config import get_settings
+from app.live_routes import router as live_router
 from app.models import (
     AgentInfoResponse,
     AgentMessageRequest,
@@ -14,6 +15,7 @@ from app.models import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+router.include_router(live_router)
 
 
 @router.get(

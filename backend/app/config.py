@@ -27,7 +27,11 @@ class Settings(BaseSettings):
 
     # Google Agent Development Kit & Gemini API
     GEMINI_API_KEY: str | None = Field(default=None, description="Google Gemini / GenAI API key")
-    GEMINI_MODEL: str = "gemini-3.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_LIVE_MODEL: str = "gemini-3.1-flash-live-preview"
+    LIVE_VOICE_NAME: str = "Puck"
+    LIVE_RESPONSE_MODALITY: Literal["AUDIO", "TEXT"] = "AUDIO"
+    GOOGLE_GENAI_USE_VERTEXAI: bool = False
 
 
 @lru_cache

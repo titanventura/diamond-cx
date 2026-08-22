@@ -7,6 +7,7 @@ FastAPI backend powered by `uv` and Google Agent Development Kit (`google-adk`).
 - **Framework**: [FastAPI](https://fastapi.tiangolo.com/)
 - **Package & Environment Manager**: [uv](https://docs.astral.sh/uv/)
 - **Agent Orchestration**: [Google ADK](https://github.com/google/adk-python) & [Google GenAI SDK](https://github.com/googleapis/python-genai)
+- **Live Streaming**: Gemini Live Multimodal Bidirectional WebSocket (Audio PCM 16kHz, Video Canvas JPEG, Text, Tools)
 - **Settings & Validation**: [Pydantic v2](https://docs.pydantic.dev/) + `pydantic-settings`
 
 ---
@@ -21,10 +22,13 @@ backend/
 ├── README.md                # Documentation & instructions
 └── app/
     ├── __init__.py
-    ├── main.py              # FastAPI app instance, CORS, lifespan, router mounting
-    ├── config.py            # Pydantic Settings & environment variables
-    ├── routes.py            # API routes (/health, /agent/info, /agent/chat)
-    ├── agent.py             # Google ADK agent definition (root_agent) & runner
+    ├── main.py              # FastAPI app, CORS, lifespan, root /ws alias
+    ├── config.py            # Pydantic Settings (Live models, voice configs)
+    ├── routes.py            # REST API router (/health, /agent/info, /agent/chat)
+    ├── live_routes.py       # Live WebSocket endpoint (/api/v1/live/ws, /api/v1/live/info)
+    ├── agent.py             # REST ADK agent definition & unary runner
+    ├── live_agent.py        # Gemini Live facade, Runner & SessionManager
+    ├── tools.py             # Mock tools: lookup_order_or_serial, query_product_knowledge
     └── models.py            # Pydantic request & response schemas
 ```
 
@@ -48,6 +52,8 @@ cp .env.example .env
 Edit `.env` and set your `GEMINI_API_KEY`:
 ```env
 GEMINI_API_KEY="your-gemini-api-key-here"
+GEMINI_LIVE_MODEL="gemini-3.1-flash-live-preview"
+LIVE_VOICE_NAME="Puck"
 ```
 
 ### 3. Install Dependencies
@@ -59,18 +65,12 @@ uv sync
 
 ### 4. Run Development Server
 
-#### Option A: FastAPI Application Server
 Start the backend server with auto-reload:
 ```bash
 uv run uvicorn app.main:app --reload --port 8000
 ```
 - **Interactive API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Alternative Docs (ReDoc)**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- **Health Check**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
-
-#### Option B: Google ADK Developer Web UI
-Launch the interactive Google ADK agent testing UI:
-```bash
-uv run adk web . --port 8080
-```
-- **ADK Web UI**: [http://localhost:8080](http://localhost:8080)
+- **Live Diagnostics**: [http://localhost:8000/api/v1/live/info](http://localhost:8000/api/v1/live/info)
+- **Live WebSocket Endpoints**:
+  - `ws://localhost:8000/ws/{user_id}/{session_id}`
+  - `ws://localhost:8000/api/v1/live/ws/{user_id}/{session_id}`
