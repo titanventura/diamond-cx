@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.agent import agent_runner
+from app.agent import agent_runner, is_api_key_configured
 from app.config import get_settings
 from app.models import (
     AgentInfoResponse,
@@ -45,7 +45,7 @@ async def get_agent_info() -> AgentInfoResponse:
         name=agent_runner.agent.name,
         description=agent_runner.agent.description or "",
         model=settings.GEMINI_MODEL,
-        api_key_configured=bool(settings.GEMINI_API_KEY),
+        api_key_configured=is_api_key_configured(settings.GEMINI_API_KEY),
     )
 
 

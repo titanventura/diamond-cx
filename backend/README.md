@@ -1,6 +1,6 @@
 # Diamond CX Backend
 
-Production-ready FastAPI backend powered by `uv` and Google Agent Development Kit (`google-adk`).
+FastAPI backend powered by `uv` and Google Agent Development Kit (`google-adk`).
 
 ## Tech Stack
 
@@ -8,7 +8,6 @@ Production-ready FastAPI backend powered by `uv` and Google Agent Development Ki
 - **Package & Environment Manager**: [uv](https://docs.astral.sh/uv/)
 - **Agent Orchestration**: [Google ADK](https://github.com/google/adk-python) & [Google GenAI SDK](https://github.com/googleapis/python-genai)
 - **Settings & Validation**: [Pydantic v2](https://docs.pydantic.dev/) + `pydantic-settings`
-- **Testing & Quality**: `pytest`, `pytest-asyncio`, `httpx`, `ruff`
 
 ---
 
@@ -20,17 +19,13 @@ backend/
 ├── pyproject.toml           # uv dependencies & project configuration
 ├── .env.example             # Environment variable template
 ├── README.md                # Documentation & instructions
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI app instance, CORS, lifespan, router mounting
-│   ├── config.py            # Pydantic Settings & environment variables
-│   ├── routes.py            # API routes (/health, /agent/info, /agent/chat)
-│   ├── agent.py             # Google ADK agent definition & runner
-│   └── models.py            # Pydantic request & response schemas
-└── tests/
+└── app/
     ├── __init__.py
-    ├── conftest.py          # Pytest fixtures and async test client
-    └── test_main.py         # Automated API tests
+    ├── main.py              # FastAPI app instance, CORS, lifespan, router mounting
+    ├── config.py            # Pydantic Settings & environment variables
+    ├── routes.py            # API routes (/health, /agent/info, /agent/chat)
+    ├── agent.py             # Google ADK agent definition (root_agent) & runner
+    └── models.py            # Pydantic request & response schemas
 ```
 
 ---
@@ -57,37 +52,25 @@ GEMINI_API_KEY="your-gemini-api-key-here"
 
 ### 3. Install Dependencies
 
-Sync the virtual environment and install all packages:
+Sync the virtual environment and install packages:
 ```bash
 uv sync
 ```
 
 ### 4. Run Development Server
 
-Start the local server with auto-reload:
+#### Option A: FastAPI Application Server
+Start the backend server with auto-reload:
 ```bash
 uv run uvicorn app.main:app --reload --port 8000
 ```
-
 - **Interactive API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Alternative Docs (ReDoc)**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 - **Health Check**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
----
-
-## Testing & Code Quality
-
-Run automated tests:
+#### Option B: Google ADK Developer Web UI
+Launch the interactive Google ADK agent testing UI:
 ```bash
-uv run pytest
+uv run adk web . --port 8080
 ```
-
-Run linter checks:
-```bash
-uv run ruff check .
-```
-
-Auto-format code:
-```bash
-uv run ruff format .
-```
+- **ADK Web UI**: [http://localhost:8080](http://localhost:8080)
