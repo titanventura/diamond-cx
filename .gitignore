@@ -62,3 +62,4 @@ htmlcov/
 .adk/
 **/app/.adk/
 
+data/

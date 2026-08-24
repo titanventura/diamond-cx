@@ -31,7 +31,21 @@ class Settings(BaseSettings):
     GEMINI_LIVE_MODEL: str = "gemini-3.1-flash-live-preview"
     LIVE_VOICE_NAME: str = "Puck"
     LIVE_RESPONSE_MODALITY: Literal["AUDIO", "TEXT"] = "AUDIO"
-    GOOGLE_GENAI_USE_VERTEXAI: bool = False
+
+    # Google Cloud & Vertex AI Vector Search 2.0
+    GOOGLE_GENAI_USE_VERTEXAI: bool = Field(default=True, description="Enable Vertex AI mode")
+    GOOGLE_CLOUD_PROJECT: str | None = Field(default=None, description="GCP Project ID for Vertex AI")
+    GOOGLE_CLOUD_LOCATION: str = Field(default="us-central1", description="GCP Region/Location for Vertex AI")
+    VECTOR_SEARCH_COLLECTION_ID: str = Field(default="diamond-cx-knowledge", description="Vector Search 2.0 Collection ID")
+    EMBEDDING_MODEL: str = Field(default="gemini-embedding-2-preview", description="Multimodal embedding model")
+    EMBEDDING_DIMENSION: int = Field(default=768, description="Output embedding dimension")
+
+
+def is_api_key_configured(api_key: str | None) -> bool:
+    """Check if a valid Gemini API key is configured (not empty or default placeholder)."""
+    if not api_key:
+        return False
+    return "your-gemini-api-key" not in api_key.lower()
 
 
 @lru_cache

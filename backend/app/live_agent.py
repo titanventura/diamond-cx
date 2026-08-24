@@ -22,9 +22,15 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import errors as genai_errors
 from google.genai import types
 
-from app.agent import is_api_key_configured
-from app.config import get_settings
-from app.tools import lookup_order_or_serial, query_product_knowledge
+from app.config import get_settings, is_api_key_configured
+from app.redressal_agent import create_redressal_subagent
+from app.tools import (
+    escalate_to_human_technician,
+    lookup_component_instructions,
+    lookup_order_or_serial,
+    query_product_knowledge,
+    search_product_knowledge_base,
+)
 
 logger = logging.getLogger("diamond_cx.live")
 
@@ -45,7 +51,7 @@ logging.getLogger("google_adk.google.adk.flows.llm_flows.base_llm_flow").addFilt
 
 
 def create_live_agent() -> Agent:
-    """Create and configure the real-time multimodal Gemini Live agent."""
+    """Create and configure the real-time multimodal Gemini Live agent with subagent delegation."""
     settings = get_settings()
 
     # Ensure API key is in environment if valid
@@ -57,21 +63,33 @@ def create_live_agent() -> Agent:
         "You communicate in real-time through bidirectional live voice and camera video.\n\n"
         "Capabilities & Guidelines:\n"
         "1. Multimodal & Camera Vision: You can hear the customer's speech, read text, and see live camera video frames. "
-        "When the customer points at or shows ANY item on camera (such as a keyboard and mouse, electronics, jewelry, certificates, serial numbers, receipts, or boxes) "
+        "When the customer points at or shows ANY item on camera (such as a keyboard and mouse, desk, electronics, jewelry, certificates, serial numbers, receipts, or boxes) "
         "and asks to find, pull up, or check order details or warranty for that item, IMMEDIATELY identify the item from the camera frame and call `lookup_order_or_serial` "
         "with the identified item name (e.g. 'keyboard', 'mouse', 'solitaire ring', 'necklace') or serial/order number.\n"
         "2. Proactive Order Lookups: Never refuse to look up an order. If the customer asks 'pull up the order details for this' or mentions an item, ALWAYS call `lookup_order_or_serial` to search the orders database.\n"
         "3. Conversational Voice Style: Keep spoken answers natural, concise, warm, and helpful. Mention key details (order ID, customer name, price, status, delivery date, warranty) clearly.\n"
-        "4. Product & Care Inquiries: Call `query_product_knowledge` for product specifications, care instructions, diamond certifications (GIA/IGI), resizing rules, and warranties.\n"
-        "5. Multilingual: Naturally adapt to the customer's language."
+        "4. Knowledge Base & Manual Inquiries: Call `search_product_knowledge_base` or `query_product_knowledge` for product specifications, component instructions, and care guides.\n"
+        "5. Technical Issues & Troubleshooting: If the customer has an issue with their device (e.g., keyboard connection dropping, standing desk error code 'RST'/'E01', pairing problems, or loose jewelry prongs), "
+        "IMMEDIATELY transfer the session to `dynamic_redressal_agent` so they can guide the customer through live step-by-step self-help repair.\n"
+        "6. Field Technician Escalation: If troubleshooting fails or the customer requests on-site repair, confirm that a certified field technician will contact them.\n"
+        "7. Multilingual: Naturally adapt to the customer's language."
     )
+
+    redressal_subagent = create_redressal_subagent(is_live=True)
 
     agent = Agent(
         name="diamond_cx_live_agent",
         description="Diamond CX Real-time Multimodal Live Concierge",
         model=settings.GEMINI_LIVE_MODEL,
         instruction=live_instruction,
-        tools=[lookup_order_or_serial, query_product_knowledge],
+        tools=[
+            lookup_order_or_serial,
+            query_product_knowledge,
+            search_product_knowledge_base,
+            lookup_component_instructions,
+            escalate_to_human_technician,
+        ],
+        sub_agents=[redressal_subagent],
     )
     return agent
 

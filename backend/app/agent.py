@@ -6,39 +6,52 @@ from google.adk.agents import Agent
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from app.config import get_settings
-from app.tools import lookup_order_or_serial, query_product_knowledge
+from app.config import get_settings, is_api_key_configured
+from app.redressal_agent import create_redressal_subagent
+from app.tools import (
+    escalate_to_human_technician,
+    lookup_component_instructions,
+    lookup_order_or_serial,
+    query_product_knowledge,
+    search_product_knowledge_base,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def is_api_key_configured(api_key: str | None) -> bool:
-    """Check if a valid Gemini API key is configured (not empty or default placeholder)."""
-    if not api_key:
-        return False
-    return "your-gemini-api-key" not in api_key.lower()
-
-
 def create_customer_agent() -> Agent:
-    """Create and configure the primary customer experience ADK agent."""
+    """Create and configure the primary customer experience ADK agent with subagent delegation."""
     settings = get_settings()
 
     # Ensure API key is in environment if valid
     if is_api_key_configured(settings.GEMINI_API_KEY):
         os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
 
+    redressal_subagent = create_redressal_subagent()
+
     agent = Agent(
         name="diamond_cx_agent",
-        description="Diamond CX Intelligent Customer Experience Assistant",
+        description="Diamond CX Intelligent Customer Experience Concierge",
         model=settings.GEMINI_MODEL,
         instruction=(
-            "You are the Diamond CX customer experience agent for a luxury jewelry company. "
-            "You have access to specialized tools:\n"
-            "1. `lookup_order_or_serial`: Use this to look up customer orders, verify serial numbers, check delivery status, and warranty info.\n"
-            "2. `query_product_knowledge`: Use this to answer customer questions about jewelry care, diamond certifications (GIA/IGI), resizing, and warranties.\n"
-            "Always be professional, concise, and helpful."
+            "You are the Diamond CX primary customer experience concierge. "
+            "You handle orders, product questions, warranties, and delegate technical troubleshooting to specialized sub-agents.\n\n"
+            "Responsibilities:\n"
+            "1. Order & Serial Lookup: Call `lookup_order_or_serial` for any order status, tracking, serial number verification, or warranty dates.\n"
+            "2. Jewelry & Product FAQs: Call `query_product_knowledge` for diamond care, certificates (GIA/IGI), resizing, and warranties.\n"
+            "3. Manuals & Knowledge Base: Call `search_product_knowledge_base` or `lookup_component_instructions` to find product specifications.\n"
+            "4. Troubleshooting & Redressal Delegation: If the customer is experiencing a technical issue, malfunction, connection failure, or hardware problem with ANY product (such as a keyboard, standing desk, electronic device, or loose diamond prong), IMMEDIATELY transfer the conversation to your sub-agent `dynamic_redressal_agent`.\n"
+            "5. Technician Escalation Response: If the redressal subagent fails to resolve the problem and escalates, warmly confirm to the customer that a field technician has been dispatched and will contact them shortly.\n"
+            "Always maintain a courteous, luxury concierge tone."
         ),
-        tools=[lookup_order_or_serial, query_product_knowledge],
+        tools=[
+            lookup_order_or_serial,
+            query_product_knowledge,
+            search_product_knowledge_base,
+            lookup_component_instructions,
+            escalate_to_human_technician,
+        ],
+        sub_agents=[redressal_subagent],
     )
     return agent
 

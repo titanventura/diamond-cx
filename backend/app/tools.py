@@ -3,7 +3,10 @@
 Can be deleted cleanly by removing this file and the tools list in app/agent.py.
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Fake Orders Database across various dates
 MOCK_ORDERS: list[dict[str, Any]] = [
@@ -180,4 +183,144 @@ def query_product_knowledge(product_name: str, question_topic: str = "general") 
     return {
         "product": matched_name.title(),
         "all_topics": data,
+    }
+
+
+def search_product_knowledge_base(
+    query: str,
+    product_name: str = "",
+    component_name: str = "",
+) -> dict[str, Any]:
+    """Search product technical manuals, user guides, component controls, and step-by-step troubleshooting instructions.
+
+    Args:
+        query: Problem description, question, or error symptom (e.g. 'how to pair bluetooth 2.4g', 'desk control panel shows RST', 'ring prong loose').
+        product_name: Optional product name or SKU filter (e.g. 'keyboard', 'height adjustable desk', 'solitaire diamond ring').
+        component_name: Optional specific component filter (e.g. 'bluetooth switcher', 'control panel', 'motor', 'prong').
+
+    Returns:
+        A dictionary containing matched knowledge chunks, component options, and step-by-step instructions.
+    """
+    from app.vector_search import vector_store
+
+    results = vector_store.search(
+        query_text=query,
+        product_filter=product_name or None,
+        component_filter=component_name or None,
+        top_k=4,
+    )
+
+    if not results:
+        return {
+            "found": False,
+            "message": f"No specific technical documentation or troubleshooting guide found for query: '{query}'.",
+            "available_products": vector_store.list_products(),
+        }
+
+    formatted_matches = []
+    for r in results:
+        c = r.chunk
+        formatted_matches.append(
+            {
+                "product_name": c.product_name,
+                "category": c.category,
+                "component": c.component_name or "General",
+                "title": c.title,
+                "content": c.text_content,
+                "controls_or_options": c.possible_states_or_options,
+                "actionable_steps": c.instructions,
+                "similarity_score": r.similarity_score,
+                "image_path": c.image_path,
+            }
+        )
+
+    return {
+        "found": True,
+        "matched_count": len(formatted_matches),
+        "results": formatted_matches,
+    }
+
+
+def lookup_component_instructions(
+    product_name: str,
+    component_name: str,
+) -> dict[str, Any]:
+    """Retrieve detailed state options, button controls, and sequential operation steps for a specific product component.
+
+    Args:
+        product_name: Name of the product (e.g. 'keyboard', 'height adjustable desk', 'solitaire diamond ring').
+        component_name: Component name (e.g. 'bluetooth switcher', 'control panel', 'memory buttons', 'prongs').
+
+    Returns:
+        Component options, indicator behaviors, and sequential instructions.
+    """
+    from app.vector_search import vector_store
+
+    chunks = vector_store.get_component_details(product_name=product_name, component_name=component_name)
+
+    if not chunks:
+        # Fallback to general search
+        return search_product_knowledge_base(
+            query=f"{product_name} {component_name}",
+            product_name=product_name,
+            component_name=component_name,
+        )
+
+    all_options: list[str] = []
+    all_instructions: list[str] = []
+    for chunk in chunks:
+        all_options.extend(chunk.possible_states_or_options)
+        all_instructions.extend(chunk.instructions)
+
+    return {
+        "found": True,
+        "product_name": product_name,
+        "component_name": component_name,
+        "controls_and_options": list(dict.fromkeys(all_options)),
+        "step_by_step_guide": list(dict.fromkeys(all_instructions)),
+        "chunks": [c.model_dump(exclude={"embedding"}) for c in chunks],
+    }
+
+
+# Simulated Technician Dispatch Database
+DISPATCH_TICKETS: list[dict[str, Any]] = []
+
+
+def escalate_to_human_technician(
+    product_name: str,
+    issue_summary: str,
+    attempted_steps: str = "",
+) -> dict[str, Any]:
+    """Create a priority technician escalation ticket when self-help troubleshooting cannot resolve the product issue.
+
+    Args:
+        product_name: The name or model of the affected product.
+        issue_summary: Brief description of the unresolved problem or physical defect.
+        attempted_steps: Summary of troubleshooting steps already tried by the customer.
+
+    Returns:
+        The generated ticket ID, dispatch details, and confirmation message.
+    """
+    import uuid
+    ticket_id = f"TECH-DISPATCH-{uuid.uuid4().hex[:6].upper()}"
+    ticket = {
+        "ticket_id": ticket_id,
+        "product_name": product_name,
+        "issue_summary": issue_summary,
+        "attempted_steps": attempted_steps,
+        "status": "Dispatch Scheduled",
+        "technician": "Certified Diamond CX Hardware Specialist",
+        "estimated_contact_window": "Within 2 business hours",
+    }
+    DISPATCH_TICKETS.append(ticket)
+    logger.info("Created technician escalation ticket: %s for %s", ticket_id, product_name)
+
+    return {
+        "success": True,
+        "ticket_id": ticket_id,
+        "status": "Escalated to Field Technician",
+        "message": (
+            f"Escalation ticket {ticket_id} has been registered. "
+            "A certified hardware technician has been assigned and will contact you directly to schedule an inspection or replacement."
+        ),
     }

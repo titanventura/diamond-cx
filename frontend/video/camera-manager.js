@@ -14,31 +14,112 @@ export class CameraManager {
     this.ctx = null;
     this.intervalId = null;
     this.isActive = false;
+    this.facingMode = "user";     // 'user' (front) or 'environment' (back)
+    this.currentDeviceId = null;
+    this.availableDevices = [];
   }
 
-  async start(videoElement) {
+  async getAvailableCameras() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return [];
+      }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      this.availableDevices = devices.filter((d) => d.kind === "videoinput");
+      return this.availableDevices;
+    } catch (err) {
+      console.warn("Could not enumerate camera devices:", err);
+      return [];
+    }
+  }
+
+  async start(videoElement, preferredDeviceId = null) {
     this.videoElement = videoElement;
+    if (preferredDeviceId) {
+      this.currentDeviceId = preferredDeviceId;
+    }
 
-    // Request camera stream (640x480 resolution is ideal for fast real-time multimodal inference)
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 640 },
-        height: { ideal: 480 },
-        facingMode: "user",
-      },
-    });
-
-    this.videoElement.srcObject = this.stream;
-    await this.videoElement.play();
+    await this._startStream();
 
     // Setup offscreen snapshot canvas
-    this.canvas = document.createElement("canvas");
-    this.canvas.width = 640;
-    this.canvas.height = 480;
-    this.ctx = this.canvas.getContext("2d");
+    if (!this.canvas) {
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = 640;
+      this.canvas.height = 480;
+      this.ctx = this.canvas.getContext("2d");
+    }
 
     this.isActive = true;
     this._startCaptureLoop();
+    await this.getAvailableCameras();
+  }
+
+  async _startStream() {
+    // Stop existing tracks if any
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream = null;
+    }
+
+    let videoConstraints = {
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+    };
+
+    if (this.currentDeviceId) {
+      videoConstraints.deviceId = { exact: this.currentDeviceId };
+    } else {
+      videoConstraints.facingMode = this.facingMode;
+    }
+
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+      });
+    } catch (err) {
+      console.warn("Primary constraint failed, falling back to standard video request:", err);
+      // Fallback without exact deviceId
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+    }
+
+    // Identify the active device ID
+    const activeTrack = this.stream.getVideoTracks()[0];
+    if (activeTrack) {
+      const settings = activeTrack.getSettings();
+      if (settings.deviceId) {
+        this.currentDeviceId = settings.deviceId;
+      }
+      if (settings.facingMode) {
+        this.facingMode = settings.facingMode;
+      }
+    }
+
+    this.videoElement.srcObject = this.stream;
+    await this.videoElement.play();
+  }
+
+  async switchCamera() {
+    if (!this.isActive) return false;
+
+    await this.getAvailableCameras();
+
+    if (this.availableDevices.length > 1) {
+      // Multiple devices detected: cycle to the next camera
+      const currentIndex = this.availableDevices.findIndex(
+        (d) => d.deviceId === this.currentDeviceId
+      );
+      const nextIndex = (currentIndex + 1) % this.availableDevices.length;
+      this.currentDeviceId = this.availableDevices[nextIndex].deviceId;
+    } else {
+      // Toggle facingMode between front ('user') and back ('environment')
+      this.facingMode = this.facingMode === "user" ? "environment" : "user";
+      this.currentDeviceId = null;
+    }
+
+    await this._startStream();
+    return true;
   }
 
   _startCaptureLoop() {
@@ -94,3 +175,4 @@ export class CameraManager {
     this.ctx = null;
   }
 }
+
