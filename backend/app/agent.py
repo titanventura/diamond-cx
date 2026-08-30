@@ -10,6 +10,7 @@ from app.config import get_settings, is_api_key_configured
 from app.redressal_agent import create_redressal_subagent
 from app.tools import (
     escalate_to_human_technician,
+    issue_order_refund_or_replacement,
     lookup_component_instructions,
     lookup_order_or_serial,
     query_product_knowledge,
@@ -49,6 +50,7 @@ def create_customer_agent() -> Agent:
             query_product_knowledge,
             search_product_knowledge_base,
             lookup_component_instructions,
+            issue_order_refund_or_replacement,
             escalate_to_human_technician,
         ],
         sub_agents=[redressal_subagent],

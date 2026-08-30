@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     VECTOR_SEARCH_COLLECTION_ID: str = Field(default="diamond-cx-knowledge", description="Vector Search 2.0 Collection ID")
     EMBEDDING_MODEL: str = Field(default="gemini-embedding-2-preview", description="Multimodal embedding model")
     EMBEDDING_DIMENSION: int = Field(default=768, description="Output embedding dimension")
+    KNOWLEDGE_STORE_PATH: str = Field(default="data/knowledge_store.json", description="Local knowledge vector store path")
+    FIRESTORE_STORE_PATH: str = Field(default="data/firestore_db.json", description="Local Firestore JSON database path")
 
 
 def is_api_key_configured(api_key: str | None) -> bool:

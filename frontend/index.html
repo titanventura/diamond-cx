@@ -3,63 +3,99 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#040711">
+  <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Diamond CX Live — Real-time Multimodal Customer Experience Concierge powered by Gemini 3.1 Live">
-  <title>Diamond CX | Real-time Multimodal Live Concierge</title>
+  <meta name="description" content="Diamond CX — Continuous E-Commerce Platform & Multimodal Live Concierge">
+  <title>Diamond CX — Store &amp; Support</title>
   
-  <!-- Fonts -->
+  <!-- Typography: Inter for clean Swiss/minimalist aesthetics -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Ambient background glow elements -->
-  <div class="ambient-glow glow-top-left" aria-hidden="true"></div>
-  <div class="ambient-glow glow-bottom-right" aria-hidden="true"></div>
-
   <div class="app-container">
-    <!-- Top Header -->
+    <!-- Top Minimal Navigation Bar -->
     <header class="app-header">
-      <div class="brand-section">
-        <div class="logo-gem" aria-label="Diamond CX Logo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="6 3 18 3 22 9 12 22 2 9 6 3"></polygon>
-          </svg>
+      <div class="header-left">
+        <div class="brand-mark">
+          <span class="brand-title">DIAMOND CX</span>
         </div>
-        <div class="brand-text-wrap">
-          <div class="brand-title-row">
-            <h1 class="brand-title">DIAMOND CX <span class="badge-live">LIVE</span></h1>
-          </div>
-          <p class="brand-subtitle">Multimodal Concierge &bull; Gemini 3.1 Live</p>
-        </div>
+
+        <nav class="main-nav-bar" id="mainNavBar" aria-label="Main Navigation">
+          <button class="nav-link-btn active" id="navBtnStore" data-target-view="viewStore">
+            <span>Store</span>
+          </button>
+          <button class="nav-link-btn" id="navBtnOrders" data-target-view="viewOrders">
+            <span>Orders</span>
+            <span class="nav-count-badge" id="navOrdersBadge" style="display: none;">0</span>
+          </button>
+          <button class="nav-link-btn" id="navBtnConcierge" data-target-view="viewConcierge">
+            <span>Live Concierge</span>
+          </button>
+        </nav>
       </div>
 
-      <div class="header-controls">
-        <div class="status-badge disconnected" id="connectionBadge" role="status" aria-live="polite">
+      <div class="header-right">
+        <!-- User Account Switcher -->
+        <div class="user-profile-wrapper">
+          <button class="user-auth-pill" id="userAuthPill" title="Account Settings">
+            <span class="user-avatar" id="userAvatar">AS</span>
+            <span class="user-name" id="userName">Aswath S</span>
+            <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none;">
+            <div class="dropdown-header">Switch Account</div>
+            <button class="dropdown-item active" data-uid="user-demo-01" data-name="Aswath S" data-email="aswath@diamondcx.com">
+              <span class="dropdown-avatar">AS</span>
+              <div class="dropdown-info">
+                <strong>Aswath S</strong>
+                <small>aswath@diamondcx.com</small>
+              </div>
+            </button>
+            <button class="dropdown-item" data-uid="user-demo-02" data-name="Sarah Connor" data-email="sarah@diamondcx.com">
+              <span class="dropdown-avatar">SC</span>
+              <div class="dropdown-info">
+                <strong>Sarah Connor</strong>
+                <small>sarah@diamondcx.com</small>
+              </div>
+            </button>
+            <button class="dropdown-item" data-uid="user-demo-03" data-name="Bruce Wayne" data-email="bruce@diamondcx.com">
+              <span class="dropdown-avatar">BW</span>
+              <div class="dropdown-info">
+                <strong>Bruce Wayne</strong>
+                <small>bruce@diamondcx.com</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="status-badge disconnected" id="connectionBadge">
           <span class="status-dot"></span>
           <span class="status-text" id="statusText">Offline</span>
         </div>
 
-        <div class="controls-capsule">
-          <div class="config-pill" title="Select Concierge Voice Profile">
-            <span class="pill-label">Voice:</span>
-            <select id="voiceSelect" class="styled-select" aria-label="Select Voice">
-              <option value="Puck" selected>Puck (Warm)</option>
-              <option value="Aoede">Aoede (Refined)</option>
-              <option value="Charon">Charon (Authoritative)</option>
-              <option value="Kore">Kore (Soft)</option>
-              <option value="Fenrir">Fenrir (Deep)</option>
+        <div class="concierge-quick-controls" id="conciergeAudioControls" style="display: none;">
+          <div class="config-control">
+            <label for="voiceSelect">Voice</label>
+            <select id="voiceSelect" class="clean-select">
+              <option value="Puck" selected>Puck</option>
+              <option value="Aoede">Aoede</option>
+              <option value="Charon">Charon</option>
+              <option value="Kore">Kore</option>
+              <option value="Fenrir">Fenrir</option>
             </select>
           </div>
 
-          <div class="config-pill" title="Select Output Modality">
-            <span class="pill-label">Output:</span>
-            <select id="modalitySelect" class="styled-select" aria-label="Select Modality">
-              <option value="AUDIO" selected>Audio + Voice</option>
+          <div class="config-control">
+            <label for="modalitySelect">Output</label>
+            <select id="modalitySelect" class="clean-select">
+              <option value="AUDIO" selected>Voice + Audio</option>
               <option value="TEXT">Text Only</option>
             </select>
           </div>
@@ -67,262 +103,396 @@
       </div>
     </header>
 
-    <!-- Mobile View Mode Switcher Tabs (Shown only on <= 1024px) -->
-    <nav class="mobile-nav-tabs" id="mobileNavTabs" aria-label="Mobile View Navigation">
-      <button class="nav-tab-btn active" id="tabBtnFeed" data-target="feed">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <span>Live Feed &amp; Chat</span>
-        <span class="tab-badge" id="tabFeedBadge" style="display: none;"></span>
-      </button>
-
-      <button class="nav-tab-btn" id="tabBtnStudio" data-target="studio">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 7l-7 5 7 5V7z"></path>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-        </svg>
-        <span>Vision &amp; Controls</span>
-        <span class="tab-indicator-dot" id="studioActiveDot" style="display: none;"></span>
-      </button>
-    </nav>
-
-    <!-- Main Workspace Layout -->
-    <main class="main-layout">
-      <!-- Left Column / Studio Panel: Multimodal Feeds & Controls -->
-      <section class="left-panel tab-panel" id="panelStudio" aria-label="Multimodal Studio and Device Controls">
-        
-        <!-- Video Camera Viewport Card -->
-        <div class="glass-card video-card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="card-icon-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 7l-7 5 7 5V7z"></path>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                </svg>
-              </span>
-              <span>Live Camera Stream</span>
+    <!-- =========================================================================
+         VIEW 1: STOREFRONT
+         ========================================================================= -->
+    <section class="view-section active" id="viewStore" aria-label="Store">
+      <div class="store-container">
+        <div class="product-showcase">
+          <!-- Gallery -->
+          <div class="product-gallery">
+            <div class="gallery-main-frame">
+              <img id="galleryMainImg" src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34.jpeg" alt="Desk Control Panel">
             </div>
-            <div class="camera-actions-wrap">
-              <button class="btn btn-icon-sm" id="btnSwitchCamera" title="Switch Camera (Front / Back / External)" style="display: none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 16v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5"></path>
-                  <path d="M4 8V3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5"></path>
-                  <path d="M7 12h10"></path>
-                  <path d="M14 9l3 3-3 3"></path>
-                  <path d="M10 15l-3-3 3-3"></path>
-                </svg>
-                <span>Switch</span>
+            <div class="gallery-thumbs" id="galleryThumbs">
+              <button class="thumb-btn active" data-src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34.jpeg">
+                <img src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34.jpeg" alt="Angle 1">
               </button>
-              <div class="camera-indicator" id="cameraIndicator">
-                <span class="rec-dot"></span>
-                <span class="rec-label">STREAMING 1 FPS</span>
-              </div>
+              <button class="thumb-btn" data-src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34 (1).jpeg">
+                <img src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34 (1).jpeg" alt="Angle 2">
+              </button>
+              <button class="thumb-btn" data-src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34 (2).jpeg">
+                <img src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.34 (2).jpeg" alt="Angle 3">
+              </button>
+              <button class="thumb-btn" data-src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.35.jpeg">
+                <img src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.35.jpeg" alt="Angle 4">
+              </button>
+              <button class="thumb-btn" data-src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.35 (1).jpeg">
+                <img src="/static/sample_products/height_adjustable_desk/WhatsApp Image 2026-08-23 at 11.01.35 (1).jpeg" alt="Angle 5">
+              </button>
             </div>
           </div>
 
-          <div class="video-container">
-            <video id="webcamVideo" autoplay playsinline muted></video>
-            <div class="video-placeholder" id="videoPlaceholder">
-              <div class="placeholder-icon-wrap">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M23 7l-7 5 7 5V7z"></path>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                </svg>
-              </div>
-              <div class="placeholder-text">
-                <p class="placeholder-title">Visual Inspection Standby</p>
-                <p class="placeholder-desc">Stream camera snapshots directly to Gemini 3.1 Live for real-time visual recognition</p>
-              </div>
-              <button class="btn btn-secondary btn-sm" id="btnToggleCameraPrompt">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 7l-7 5 7 5V7z"></path>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                </svg>
-                <span>Enable Camera</span>
-              </button>
+          <!-- Product Details -->
+          <div class="product-details">
+            <div class="product-meta-header">
+              <span class="meta-sku">Model JHT8-ED3</span>
+              <span class="meta-category">Ergonomic Furniture</span>
             </div>
-            
-            <div class="camera-hud" id="cameraHud">
-              <span class="hud-tag">
-                <span class="hud-dot"></span>
-                <span>Gemini Vision Active</span>
-              </span>
-              <button class="hud-flip-btn" id="btnFlipCameraHud" title="Flip Camera Source" style="display: none;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                </svg>
-                <span>Flip</span>
+
+            <h1 class="product-title" id="storeProductTitle">JIN OFFICE Electric Sit-Stand Desk</h1>
+            <p class="product-lead">Dual-motor height-adjustable desk with 3-stage steel columns, digital LED memory touch panel, and multi-axis anti-collision sensor.</p>
+
+            <div class="product-price-row">
+              <div class="price-amount">$499.00 <span class="price-currency">USD</span></div>
+              <div class="price-terms">Free shipping &bull; 2-year warranty</div>
+            </div>
+
+            <!-- Technical Specifications Table -->
+            <div class="specs-table-wrapper">
+              <div class="specs-table-title">Specifications</div>
+              <table class="specs-table">
+                <tbody>
+                  <tr>
+                    <th>Lifting System</th>
+                    <td>Dual synchronized electric motors (<45 dB)</td>
+                  </tr>
+                  <tr>
+                    <th>Height Range</th>
+                    <td>60 cm &ndash; 125 cm (23.6" &ndash; 49.2")</td>
+                  </tr>
+                  <tr>
+                    <th>Lift Speed &amp; Capacity</th>
+                    <td>25 mm/s &bull; 120 kg (265 lbs) max load</td>
+                  </tr>
+                  <tr>
+                    <th>Controller</th>
+                    <td>7-button digital LED touchpad (3 presets, timer reminder)</td>
+                  </tr>
+                  <tr>
+                    <th>Safety Systems</th>
+                    <td>Adjustable anti-collision gyro (S-1 to S-5)</td>
+                  </tr>
+                  <tr>
+                    <th>Self-Diagnostics</th>
+                    <td>rST calibration reset, E01 thermal rest recovery</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="product-actions">
+              <button class="btn btn-primary btn-large" id="btnOpenCheckout">
+                <span>Purchase Product &bull; $499.00</span>
+              </button>
+              <button class="btn btn-secondary btn-large" id="btnAskConciergeAboutDesk">
+                <span>Inquire with Live Concierge</span>
               </button>
             </div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Audio Visualizer Spectrum Card -->
-        <div class="glass-card visualizer-card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="card-icon-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                  <line x1="12" y1="19" x2="12" y2="23"></line>
-                </svg>
-              </span>
-              <span>Voice Activity &amp; Spectrum</span>
-            </div>
-            <div class="visualizer-status-wrap">
-              <span class="live-activity-pill" id="liveActivityPill">Ready</span>
-              <span class="model-badge">16kHz PCM</span>
-            </div>
+    <!-- =========================================================================
+         VIEW 2: ORDERS HUB
+         ========================================================================= -->
+    <section class="view-section" id="viewOrders" aria-label="Orders">
+      <div class="orders-container">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Order History</h2>
+            <p class="section-desc">Purchased hardware, active warranties, and live diagnostics support.</p>
           </div>
-
-          <div class="visualizer-container">
-            <canvas id="visualizerCanvas" height="64"></canvas>
-            <div class="volume-bar-container" title="Audio Input Level">
-              <div class="volume-bar-fill" id="volumeBarFill"></div>
-            </div>
-          </div>
+          <button class="btn btn-secondary btn-sm" id="btnRefreshOrders">
+            <span>Refresh</span>
+          </button>
         </div>
 
-        <!-- Master Session Controls Card -->
-        <div class="glass-card controls-card">
-          <div class="controls-grid">
-            <button class="btn btn-primary btn-large" id="btnConnect" aria-label="Start or End Live Multimodal Session">
-              <span class="btn-spinner" id="connectSpinner" style="display: none;"></span>
-              <svg id="btnConnectIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              <span id="btnConnectText">Start Live Session</span>
-            </button>
-
-            <div class="button-group">
-              <button class="btn btn-icon" id="btnToggleMic" title="Mute / Unmute Microphone" aria-label="Toggle Microphone" disabled>
-                <svg id="micIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                  <line x1="12" y1="19" x2="12" y2="23"></line>
-                </svg>
-              </button>
-
-              <button class="btn btn-icon" id="btnToggleCamera" title="Start / Stop Camera Stream" aria-label="Toggle Camera" disabled>
-                <svg id="cameraIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 7l-7 5 7 5V7z"></path>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                </svg>
-              </button>
-
-              <button class="btn btn-icon" id="btnInterrupt" title="Interrupt Concierge Speech" aria-label="Interrupt Concierge" disabled>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="6" y="4" width="4" height="16" rx="1"></rect>
-                  <rect x="14" y="4" width="4" height="16" rx="1"></rect>
-                </svg>
-              </button>
-            </div>
+        <div class="orders-list-wrapper" id="ordersListWrapper">
+          <div class="orders-loading" id="ordersLoading" style="display: none;">
+            <span>Loading orders...</span>
           </div>
 
-          <!-- Quick Test Inquiries -->
-          <div class="quick-prompts-section">
-            <div class="quick-header">
-              <span class="quick-title">Quick Inquiries</span>
-              <span class="quick-hint">Tap to ask live concierge</span>
-            </div>
-            <div class="quick-chips-wrapper">
-              <div class="quick-chips-scroll">
-                <button class="chip" data-prompt="Pull up the order details for the keyboard and mouse combo I am showing on camera.">
-                  <span class="chip-icon">📦</span>
-                  <span>Keyboard &amp; Mouse Order</span>
-                </button>
-                <button class="chip" data-prompt="Can you look up order ORD-2026-1001 for Aswath?">
-                  <span class="chip-icon">🔍</span>
-                  <span>Order ORD-2026-1001</span>
-                </button>
-                <button class="chip" data-prompt="What are the care, cleaning and certification details for a Solitaire Diamond Ring?">
-                  <span class="chip-icon">💎</span>
-                  <span>Solitaire Diamond Care</span>
-                </button>
-                <button class="chip" data-prompt="Look at what I'm showing on the camera. What item is this and does it have warranty?">
-                  <span class="chip-icon">📷</span>
-                  <span>Inspect Camera Item</span>
-                </button>
-                <button class="chip" data-prompt="Check serial number SN-SOL-8821-PT and tell me the appraisal status.">
-                  <span class="chip-icon">🏷️</span>
-                  <span>Serial SN-SOL-8821</span>
-                </button>
+          <div class="orders-grid" id="ordersGrid">
+            <!-- Dynamically populated via app.js -->
+          </div>
+
+          <div class="orders-empty-state" id="ordersEmptyState" style="display: none;">
+            <p>No orders found for this account.</p>
+            <button class="btn btn-primary btn-sm" id="btnEmptyGoToStore">View Storefront</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         VIEW 3: LIVE CONCIERGE & DIAGNOSTICS STUDIO
+         ========================================================================= -->
+    <section class="view-section" id="viewConcierge" aria-label="Live Support">
+      <div class="concierge-container">
+        <!-- Active Order Context Banner -->
+        <div class="order-context-banner" id="orderContextBanner" style="display: none;">
+          <div class="context-info">
+            <span class="context-label">Active Support Context</span>
+            <span class="context-title" id="contextOrderTitle">Order #ORD-2026-DESK-01</span>
+            <span class="context-meta" id="contextOrderMeta">Serial: SN-DESK-9842-ED3 &bull; $499.00</span>
+          </div>
+          <button class="btn-clear-context" id="btnClearOrderContext" title="Disconnect context">
+            ✕
+          </button>
+        </div>
+
+        <!-- Studio Workspace -->
+        <div class="studio-layout">
+          <!-- Left Column: Camera, Audio Spectrum & Controls -->
+          <div class="studio-controls-column">
+            <!-- Camera Card -->
+            <div class="clean-card camera-card">
+              <div class="card-bar">
+                <span class="card-heading">Camera Feed</span>
+                <button class="btn btn-xs btn-secondary" id="btnSwitchCamera" style="display: none;">Switch</button>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Right Column / Interaction Feed Panel: Live Conversation & Tool Events -->
-      <section class="right-panel tab-panel active" id="panelFeed" aria-label="Live Interaction and Chat Feed">
-        <div class="glass-card feed-card">
-          <div class="card-header feed-header">
-            <div class="card-title">
-              <span class="card-icon-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-              </span>
-              <span>Live Interaction &amp; Tool Feed</span>
-            </div>
-            <div class="feed-header-actions">
-              <button class="btn btn-sm btn-ghost" id="btnClearFeed" title="Clear Conversation Feed">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                <span>Clear</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Feed Messages Scroll Area -->
-          <div class="feed-content" id="feedContent" role="log" aria-live="polite">
-            <!-- Welcome message -->
-            <div class="message-bubble system-message welcome-message">
-              <div class="msg-header">
-                <div class="msg-sender-wrap">
-                  <span class="system-badge-icon">✦</span>
-                  <span class="msg-sender">DIAMOND CONCIERGE</span>
+              <div class="video-container">
+                <video id="webcamVideo" autoplay playsinline muted></video>
+                <div class="video-placeholder" id="videoPlaceholder">
+                  <p>Camera Standby</p>
+                  <button class="btn btn-secondary btn-sm" id="btnToggleCameraPrompt">Enable Camera</button>
                 </div>
-                <span class="msg-time">Ready</span>
+                <div class="camera-indicator" id="cameraIndicator">
+                  <span class="rec-dot"></span>
+                  <span>1 FPS Snapshot Stream</span>
+                </div>
               </div>
-              <div class="msg-body">
-                Welcome to <strong>Diamond CX Live</strong>. Click <em>Start Live Session</em> to begin real-time voice and visual consultation. You can speak naturally, hold items to your camera, or type inquiries below.
+            </div>
+
+            <!-- Audio Spectrum Card -->
+            <div class="clean-card audio-card">
+              <div class="card-bar">
+                <span class="card-heading">Voice Stream</span>
+                <span class="clean-badge" id="liveActivityPill">Ready</span>
               </div>
-              <div class="welcome-features-pills">
-                <span class="feature-tag">🎙️ 16kHz Bidirectional Voice</span>
-                <span class="feature-tag">👁️ Live Camera Inspection</span>
-                <span class="feature-tag">⚡ Instant Tool Lookups</span>
+              <div class="visualizer-wrapper">
+                <canvas id="visualizerCanvas" height="40"></canvas>
+                <div class="volume-track">
+                  <div class="volume-fill" id="volumeBarFill"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Session Controls -->
+            <div class="clean-card session-actions-card">
+              <div class="action-buttons-row">
+                <button class="btn btn-primary btn-large btn-connect" id="btnConnect">
+                  <span class="btn-spinner" id="connectSpinner" style="display: none;"></span>
+                  <span id="btnConnectText">Start Live Session</span>
+                </button>
+
+                <button class="btn btn-secondary btn-icon" id="btnToggleMic" title="Toggle Mic" disabled>
+                  <svg id="micIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                  </svg>
+                </button>
+
+                <button class="btn btn-secondary btn-icon" id="btnToggleCamera" title="Toggle Camera" disabled>
+                  <svg id="cameraIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 7l-7 5 7 5V7z"></path>
+                    <rect x="1" y="5" width="15" height="14" rx="1" ry="1"></rect>
+                  </svg>
+                </button>
+
+                <button class="btn btn-secondary btn-icon" id="btnInterrupt" title="Interrupt" disabled>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Quick Inquiry Options -->
+              <div class="quick-inquiries-wrap">
+                <div class="quick-inquiries-title">Troubleshooting &amp; Inquiries</div>
+                <div class="quick-inquiries-list" id="quickChipsScroll">
+                  <button class="inquiry-btn inquiry-alert" data-prompt="My desk dual motor is completely burned out and making grinding noise. Please process a full refund.">
+                    <span>Motor Defect &bull; Request Full Refund</span>
+                  </button>
+                  <button class="inquiry-btn" data-prompt="My desk control panel display flashes 'rST' and will not move. How do I reset it?">
+                    <span>Fix 'rST' Reset Code</span>
+                  </button>
+                  <button class="inquiry-btn" data-prompt="The desk screen shows error code E01 or HOT. What does this mean?">
+                    <span>E01 / HOT Overheating Guidance</span>
+                  </button>
+                  <button class="inquiry-btn" data-prompt="How do I save height presets 1, 2, and 3 on the memory panel?">
+                    <span>Memory Presets Configuration</span>
+                  </button>
+                  <button class="inquiry-btn" data-prompt="Can you check the warranty and delivery details for my height adjustable desk order?">
+                    <span>Check Order &amp; Warranty</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Text Input Bar -->
-          <div class="chat-input-bar">
-            <div class="input-wrapper">
-              <input 
-                type="text" 
-                id="textInput" 
-                placeholder="Type a message or inquiry (e.g. Check SN-SOL-8821-PT)..." 
-                autocomplete="off"
-                aria-label="Message Input"
-                disabled
-              >
-              <button class="btn btn-primary btn-icon btn-send" id="btnSendText" title="Send message" aria-label="Send message" disabled>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                  <line x1="22" y1="2" x2="11" y2="13"></line>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
-              </button>
+          <!-- Right Column: Interaction Feed & Chat -->
+          <div class="studio-feed-column">
+            <div class="clean-card feed-card">
+              <div class="card-bar">
+                <span class="card-heading">Live Interaction &amp; Diagnostic Log</span>
+                <button class="btn btn-xs btn-secondary" id="btnClearFeed">Clear</button>
+              </div>
+
+              <div class="feed-content" id="feedContent" role="log" aria-live="polite">
+                <div class="message-bubble system-message">
+                  <div class="msg-meta">
+                    <span class="msg-author">SYSTEM</span>
+                  </div>
+                  <div class="msg-body">
+                    Live session ready. Connect via voice, video stream, or text to diagnose desk errors, review specifications, or process order refunds.
+                  </div>
+                </div>
+              </div>
+
+              <div class="feed-input-bar">
+                <input 
+                  type="text" 
+                  id="textInput" 
+                  placeholder="Type an issue or inquiry..." 
+                  autocomplete="off"
+                  disabled
+                >
+                <button class="btn btn-primary btn-sm" id="btnSendText" disabled>
+                  <span>Send</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 1: CHECKOUT
+       ========================================================================= -->
+  <div class="modal-backdrop" id="checkoutModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <div class="modal-title">Checkout</div>
+        <button class="modal-close-btn" id="btnCloseCheckout">&times;</button>
+      </div>
+
+      <div class="modal-body" id="checkoutFormStep">
+        <div class="checkout-split">
+          <!-- Summary -->
+          <div class="checkout-summary">
+            <div class="summary-item">
+              <div class="summary-item-name">JIN OFFICE Electric Sit-Stand Desk</div>
+              <div class="summary-item-sku">Model JHT8-ED3 &bull; Dual Motor</div>
+              <div class="summary-item-price">$499.00</div>
+            </div>
+
+            <div class="summary-rows">
+              <div class="summary-row"><span>Subtotal</span><span>$499.00</span></div>
+              <div class="summary-row"><span>Shipping</span><span>$0.00</span></div>
+              <div class="summary-row"><span>2-Year Warranty</span><span>Included</span></div>
+              <div class="summary-row total-row"><span>Total</span><span>$499.00 USD</span></div>
+            </div>
+
+            <div class="test-notice">
+              Test Sandbox Mode. No actual charge will occur.
+            </div>
+          </div>
+
+          <!-- Payment Form -->
+          <div class="checkout-form-side">
+            <form id="checkoutPaymentForm">
+              <div class="field">
+                <label for="checkoutCustomerName">Name</label>
+                <input type="text" id="checkoutCustomerName" value="Aswath S" required>
+              </div>
+
+              <div class="field">
+                <label for="checkoutCustomerEmail">Email</label>
+                <input type="email" id="checkoutCustomerEmail" value="aswath@diamondcx.com" required>
+              </div>
+
+              <div class="field">
+                <label for="checkoutAddress">Delivery Address</label>
+                <input type="text" id="checkoutAddress" value="42 Innovation Way, Silicon Valley, CA 94025" required>
+              </div>
+
+              <div class="field">
+                <label>Card Details (Test Pre-filled)</label>
+                <div class="card-inputs-row">
+                  <input type="text" id="cardNumber" value="4242 4242 4242 4242" readonly style="flex: 2;">
+                  <input type="text" id="cardExp" value="12/28" readonly style="flex: 1;">
+                  <input type="text" id="cardCvc" value="123" readonly style="flex: 1;">
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-large btn-block" id="btnSubmitPayment">
+                <span class="btn-spinner" id="paySpinner" style="display: none;"></span>
+                <span id="btnPayText">Authorize &amp; Pay $499.00</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Screen -->
+      <div class="modal-body" id="checkoutSuccessStep" style="display: none;">
+        <div class="success-box">
+          <div class="success-badge">Payment Authorized</div>
+          <h3>Order Confirmed</h3>
+          <p class="success-sub">Your order has been recorded in Firestore and registered to your account.</p>
+
+          <table class="receipt-table">
+            <tbody>
+              <tr><th>Order ID</th><td id="successOrderId">ORD-2026-XXXX</td></tr>
+              <tr><th>Serial Number</th><td id="successSerial">SN-DESK-XXXX-ED3</td></tr>
+              <tr><th>Amount Charged</th><td id="successAmount">$499.00 USD</td></tr>
+              <tr><th>Payment Reference</th><td id="successPaymentId">PAY-TEST-XXXX</td></tr>
+              <tr><th>Warranty</th><td>Active (2 Years)</td></tr>
+            </tbody>
+          </table>
+
+          <div class="success-buttons">
+            <button class="btn btn-primary" id="btnSuccessViewOrders">View in Orders</button>
+            <button class="btn btn-secondary" id="btnSuccessLaunchSupport">Launch AI Support</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: SUPPORT TICKET
+       ========================================================================= -->
+  <div class="modal-backdrop" id="ticketModal" style="display: none;">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-top">
+        <div>
+          <div class="modal-title">Create Support Ticket</div>
+          <div class="modal-sub" id="ticketModalSubtitle">Linked to Order</div>
+        </div>
+        <button class="modal-close-btn" id="btnCloseTicket">&times;</button>
+      </div>
+
+      <form id="supportTicketForm" class="modal-body">
+        <input type="hidden" id="ticketOrderId">
+        <div class="field">
+          <label for="ticketSubject">Subject</label>
+          <input type="text" id="ticketSubject" placeholder="e.g. Motor failure or rST error" required>
+        </div>
+        <div class="field">
+          <label for="ticketDescription">Description</label>
+          <textarea id="ticketDescription" rows="4" placeholder="Describe the symptom or fault..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-large btn-block" id="btnSubmitTicket">Submit Ticket</button>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

@@ -94,37 +94,47 @@ MOCK_PRODUCT_FAQ: dict[str, dict[str, str]] = {
 
 
 def lookup_order_or_serial(search_query: str) -> dict[str, Any]:
-    """Find and spot order details, serial numbers, delivery status, and warranty.
+    """Find and spot order details, serial numbers, delivery status, payment info, and warranty.
 
     Args:
         search_query: An order ID (e.g. 'ORD-2026-1001'), a serial number
-          (e.g. 'SN-SOL-8821-PT'), a customer name (e.g. 'Aswath'), or
+          (e.g. 'SN-SOL-8821-PT', 'SN-DESK-9842-ED3'), a customer name (e.g. 'Aswath'),
+          a product name (e.g. 'height adjustable desk', 'standing desk'), or
           'all' to list recent orders.
 
     Returns:
         A dictionary containing matched order records or all recent orders.
     """
+    from app.firestore_service import firestore_service
+
     query = search_query.strip().lower()
+
+    # Load live Firestore orders combined with mock orders
+    firestore_orders = firestore_service.list_orders()
+    all_combined_orders = list(firestore_orders) + [
+        o for o in MOCK_ORDERS if not any(fo.get("order_id") == o["order_id"] for fo in firestore_orders)
+    ]
 
     if not query or query in ("all", "list", "recent"):
         return {
-            "total_orders": len(MOCK_ORDERS),
-            "orders": MOCK_ORDERS,
+            "total_orders": len(all_combined_orders),
+            "orders": all_combined_orders,
         }
 
     query_tokens = [w for w in query.replace("-", " ").replace(",", " ").split() if len(w) > 2]
 
     matched = []
-    for order in MOCK_ORDERS:
+    for order in all_combined_orders:
         order_str = (
-            f"{order['order_id']} {order['serial_number']} "
-            f"{order['customer_name']} {order['product_name']}"
+            f"{order.get('order_id', '')} {order.get('serial_number', '')} "
+            f"{order.get('customer_name', '')} {order.get('product_name', '')} "
+            f"{order.get('payment_id', '')}"
         ).lower()
         # Direct substring match
         if query in order_str:
             matched.append(order)
             continue
-        # Keyword token overlap match (e.g., 'keyboard mouse combo' matching 'A keyboard and mouse')
+        # Keyword token overlap match (e.g., 'standing desk' or 'adjustable desk')
         if any(token in order_str for token in query_tokens):
             matched.append(order)
 
@@ -132,7 +142,10 @@ def lookup_order_or_serial(search_query: str) -> dict[str, Any]:
         return {
             "found": False,
             "message": f"No orders or serial numbers matching '{search_query}'.",
-            "available_orders_summary": [f"{o['order_id']} - {o['product_name']}" for o in MOCK_ORDERS],
+            "available_orders_summary": [
+                f"{o.get('order_id')} - {o.get('product_name')} ({o.get('customer_name')})"
+                for o in all_combined_orders[:6]
+            ],
         }
 
     return {
@@ -324,3 +337,66 @@ def escalate_to_human_technician(
             "A certified hardware technician has been assigned and will contact you directly to schedule an inspection or replacement."
         ),
     }
+
+
+def issue_order_refund_or_replacement(
+    order_id: str,
+    reason: str,
+    action: str = "refund",
+    notes: str = "",
+) -> dict[str, Any]:
+    """Spot a persistent hardware failure, defect, or customer request and process a refund or replacement for an order.
+
+    Args:
+        order_id: The customer's order ID (e.g. 'ORD-2026-DESK-01', 'ORD-2026-1001', or order identifier).
+        reason: Justification for refund/replacement (e.g. 'Motor burned out and unrecoverable', 'E01 thermal shutdown permanent failure', 'Defective control panel', 'Customer requested warranty return').
+        action: Either 'refund' (reverses payment to customer card) or 'replacement' (ships new unit).
+        notes: Optional diagnostic details, attempted fixes, or customer remarks.
+
+    Returns:
+        Structured confirmation with refund reference ID, amount credited, payment ID, and pickup instructions.
+    """
+    from app.firestore_service import firestore_service
+
+    logger.info("Executing issue_order_refund_or_replacement for %s: action=%s, reason=%s", order_id, action, reason)
+
+    # 1. First check Firestore orders
+    order = firestore_service.get_order(order_id)
+    if order:
+        return firestore_service.process_refund(
+            order_id=order["order_id"],
+            reason=reason,
+            action=action,
+            notes=notes,
+        )
+
+    # 2. Check mock orders fallback
+    clean_id = order_id.strip().lower()
+    matched_mock = None
+    for mo in MOCK_ORDERS:
+        if clean_id in mo["order_id"].lower() or mo["order_id"].lower() in clean_id:
+            matched_mock = mo
+            break
+
+    import uuid
+    ref_id = f"REF-2026-{uuid.uuid4().hex[:6].upper()}"
+    amt_str = matched_mock.get("price", "$499.00") if matched_mock else "$499.00"
+    p_name = matched_mock.get("product_name", "JIN OFFICE Electric Sit-Stand Desk") if matched_mock else "Product"
+
+    status_str = "Refund Settled & Credited" if action == "refund" else "Replacement Dispatched"
+
+    return {
+        "success": True,
+        "refund_id": ref_id,
+        "order_id": order_id,
+        "product_name": p_name,
+        "refund_amount": amt_str,
+        "original_payment_id": "PAY-TEST-MOCK-CARD",
+        "status": status_str,
+        "action": action,
+        "message": (
+            f"Full refund of {amt_str} has been authorized and credited to your original payment method. "
+            f"Refund Reference ID: {ref_id}. A return shipping label has been dispatched to your email."
+        ),
+    }
+

@@ -70,20 +70,31 @@ def create_app() -> FastAPI:
     # Mount API Router under prefix
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
+    # Mount Storefront & Orders Router
+    from app.store_routes import router as store_router
+    app.include_router(store_router, prefix=settings.API_V1_STR)
+
     # Convenience root websocket alias (e.g. ws://localhost:8000/ws/{user_id}/{session_id})
     app.add_api_websocket_route("/ws/{user_id}/{session_id}", live_websocket_endpoint)
 
+    # Mount Static Files for sample product images
+    from pathlib import Path
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import RedirectResponse
+
+    data_products_dir = Path(__file__).resolve().parent.parent / "data" / "sample_products"
+    if data_products_dir.exists():
+        app.mount("/static/sample_products", StaticFiles(directory=str(data_products_dir)), name="sample_products")
+
+    frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
+    if frontend_dir.exists():
+        app.mount("/app", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
+
     # Convenience root endpoint
     @app.get("/", tags=["System"])
-    async def root() -> dict[str, str]:
-        return {
-            "name": settings.PROJECT_NAME,
-            "version": settings.VERSION,
-            "docs": "/docs",
-            "health": f"{settings.API_V1_STR}/health",
-            "live_info": f"{settings.API_V1_STR}/live/info",
-            "live_websocket": "/ws/{user_id}/{session_id}",
-        }
+    async def root() -> RedirectResponse:
+        return RedirectResponse(url="/app/")
+
 
     return app
 

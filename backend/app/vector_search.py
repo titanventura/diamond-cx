@@ -7,6 +7,7 @@ storage, indexing, and hybrid text/image similarity search.
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import os
@@ -18,6 +19,16 @@ from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 from google.protobuf import struct_pb2
+
+
+def _cosine_similarity(v1: list[float] | None, v2: list[float] | None) -> float:
+    """Compute cosine similarity between two float vectors."""
+    if not v1 or not v2 or len(v1) != len(v2):
+        return 0.0
+    dot = sum(a * b for a, b in zip(v1, v2))
+    norm1 = math.sqrt(sum(a * a for a in v1)) or 1.0
+    norm2 = math.sqrt(sum(b * b for b in v2)) or 1.0
+    return max(-1.0, min(1.0, dot / (norm1 * norm2)))
 
 try:
     from google.cloud import vectorsearch_v1
@@ -252,8 +263,31 @@ class VectorStoreManager:
         except Exception as exc:
             logger.error("Failed to initialize Google Cloud Vector Search 2.0 clients: %s", exc)
 
+    def _get_local_store_path(self) -> Path:
+        p = Path(self.settings.KNOWLEDGE_STORE_PATH)
+        if not p.is_absolute():
+            backend_dir = Path(__file__).resolve().parent.parent
+            return backend_dir / p
+        return p
+
+    def _read_local_store(self) -> dict[str, dict[str, Any]]:
+        path = self._get_local_store_path()
+        if not path.exists() or path.stat().st_size == 0:
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def _write_local_store(self, data: dict[str, dict[str, Any]]) -> None:
+        path = self._get_local_store_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp.replace(path)
+
     def ingest_chunk(self, chunk: KnowledgeChunk) -> KnowledgeChunk:
-        """Embed and persist a KnowledgeChunk directly into Google Cloud Vertex AI Vector Search 2.0."""
+        """Embed and persist a KnowledgeChunk locally and to Google Cloud Vector Search (if active)."""
         # 1. Generate text embedding
         embed_text = (
             f"Product: {chunk.product_name}\n"
@@ -279,39 +313,113 @@ class VectorStoreManager:
         if not image_emb and chunk.content_type == "image":
             image_emb = text_emb
 
-        data_obj = _chunk_to_data_object(chunk, text_emb=text_emb, image_emb=image_emb)
+        # 3. Always save to local persistent JSON vector store
+        local_data = self._read_local_store()
+        local_data[chunk.id] = {
+            "chunk": chunk.model_dump(exclude_none=True),
+            "text_emb": text_emb,
+            "image_emb": image_emb,
+        }
+        self._write_local_store(local_data)
+        logger.info("Persisted chunk %s in local knowledge store", chunk.id)
 
-        if self._data_client and self.collection_name:
+        # 4. If Cloud Vector Search is enabled, attempt cloud upload
+        if self._data_client and self.collection_name and VECTOR_SEARCH_LIB_AVAILABLE:
             try:
+                data_obj = _chunk_to_data_object(chunk, text_emb=text_emb, image_emb=image_emb)
                 req = vectorsearch_v1.CreateDataObjectRequest(
                     parent=self.collection_name,
                     data_object=data_obj,
                     data_object_id=chunk.id,
                 )
                 self._data_client.create_data_object(request=req)
-                logger.info("Created DataObject %s in Vector DB", chunk.id)
+                logger.info("Created DataObject %s in Cloud Vector DB", chunk.id)
             except Exception as create_exc:
-                # If chunk already exists in collection, update it
                 try:
                     data_obj.name = f"{self.collection_name}/dataObjects/{chunk.id}"
                     req = vectorsearch_v1.UpdateDataObjectRequest(
                         data_object=data_obj,
                     )
                     self._data_client.update_data_object(request=req)
-                    logger.info("Updated DataObject %s in Vector DB", chunk.id)
+                    logger.info("Updated DataObject %s in Cloud Vector DB", chunk.id)
                 except Exception as update_exc:
-                    logger.error("Failed to store DataObject %s in Vector DB: %s", chunk.id, update_exc)
-                    raise update_exc from create_exc
+                    logger.warning("Cloud Vector Search sync skipped: %s (local store saved)", update_exc)
 
         return chunk
 
+    def _search_local(
+        self,
+        query_text: str | None = None,
+        query_image_bytes: bytes | None = None,
+        product_filter: str | None = None,
+        component_filter: str | None = None,
+        top_k: int = 4,
+    ) -> list[VectorSearchResult]:
+        """Perform cosine similarity search against local persistent knowledge store."""
+        local_data = self._read_local_store()
+        if not local_data:
+            return []
+
+        text_vec = self.embedding_client.embed_text(query_text) if query_text else None
+        image_vec = self.embedding_client.embed_image(query_image_bytes) if query_image_bytes else None
+
+        prod_norm = product_filter.strip().lower() if product_filter else None
+        comp_norm = component_filter.strip().lower() if component_filter else None
+
+        candidates: list[VectorSearchResult] = []
+        for item_id, item in local_data.items():
+            c_dict = item.get("chunk", {})
+            chunk = KnowledgeChunk(**c_dict)
+
+            # Apply filters
+            if prod_norm:
+                if prod_norm not in chunk.product_name.lower() and prod_norm not in chunk.product_id.lower():
+                    continue
+            if comp_norm and chunk.component_name:
+                if comp_norm not in chunk.component_name.lower():
+                    continue
+
+            # Calculate similarity
+            score = 0.0
+            mod = "text"
+            if text_vec and item.get("text_emb"):
+                t_score = _cosine_similarity(text_vec, item["text_emb"])
+                score = max(score, t_score)
+            if image_vec and item.get("image_emb"):
+                i_score = _cosine_similarity(image_vec, item["image_emb"])
+                if text_vec:
+                    score = (score * 0.6) + (i_score * 0.4)
+                    mod = "hybrid"
+                else:
+                    score = i_score
+                    mod = "image"
+
+            # Keyword & state boost
+            if query_text:
+                q_lower = query_text.lower()
+                if chunk.component_name and chunk.component_name.lower() in q_lower:
+                    score += 0.15
+                if any(opt.lower() in q_lower for opt in chunk.possible_states_or_options):
+                    score += 0.10
+
+            candidates.append(
+                VectorSearchResult(
+                    chunk=chunk,
+                    similarity_score=round(score, 4),
+                    matched_modality=mod,
+                )
+            )
+
+        candidates.sort(key=lambda x: x.similarity_score, reverse=True)
+        return candidates[:top_k]
+
     def ingest_batch(self, chunks: list[KnowledgeChunk]) -> int:
-        """Batch ingest a list of KnowledgeChunks into Google Cloud Vertex AI Vector Search 2.0."""
+        """Batch ingest a list of KnowledgeChunks."""
         count = 0
         for chunk in chunks:
             self.ingest_chunk(chunk)
             count += 1
-        logger.info("Ingested %d chunks into Vertex AI Vector Search", count)
+        logger.info("Ingested %d chunks into vector store", count)
         return count
 
     def search(
@@ -323,13 +431,18 @@ class VectorStoreManager:
         top_k: int = 4,
         min_score: float = 0.25,
     ) -> list[VectorSearchResult]:
-        """Perform multimodal vector search directly on Google Cloud Vertex AI Vector Search 2.0."""
+        """Perform multimodal vector search, with automatic local fallback."""
         if not query_text and not query_image_bytes:
             return []
 
         if not self._search_client or not self.collection_name:
-            logger.error("Google Cloud Vector Search client is not initialized.")
-            return []
+            return self._search_local(
+                query_text=query_text,
+                query_image_bytes=query_image_bytes,
+                product_filter=product_filter,
+                component_filter=component_filter,
+                top_k=top_k,
+            )
 
         text_vec: list[float] | None = None
         image_vec: list[float] | None = None
@@ -426,14 +539,22 @@ class VectorStoreManager:
     def get_component_details(
         self, product_name: str, component_name: str
     ) -> list[KnowledgeChunk]:
-        """Retrieve all instruction and state chunks for a specific component directly from Vertex AI Vector DB."""
-        if not self._search_client or not self.collection_name:
-            return []
-
+        """Retrieve all instruction and state chunks for a specific component."""
         p_name = product_name.strip().lower()
         c_name = component_name.strip().lower()
-        matched: list[KnowledgeChunk] = []
 
+        if not self._search_client or not self.collection_name:
+            local_data = self._read_local_store()
+            matched = []
+            for item in local_data.values():
+                chunk = KnowledgeChunk(**item.get("chunk", {}))
+                if p_name in chunk.product_name.lower() or chunk.product_name.lower() in p_name:
+                    if chunk.component_name and (c_name in chunk.component_name.lower() or chunk.component_name.lower() in c_name):
+                        matched.append(chunk)
+            matched.sort(key=lambda c: (c.step_number or 0))
+            return matched
+
+        matched: list[KnowledgeChunk] = []
         try:
             req = vectorsearch_v1.QueryDataObjectsRequest(
                 parent=self.collection_name,
@@ -453,9 +574,37 @@ class VectorStoreManager:
         return matched
 
     def list_products(self) -> list[dict[str, Any]]:
-        """List distinct products and registered components directly from Vertex AI Vector DB."""
+        """List distinct products and registered components."""
         if not self._search_client or not self.collection_name:
-            return []
+            local_data = self._read_local_store()
+            products: dict[str, dict[str, Any]] = {}
+            for item in local_data.values():
+                chunk = KnowledgeChunk(**item.get("chunk", {}))
+                pid = chunk.product_id
+                if not pid:
+                    continue
+                if pid not in products:
+                    products[pid] = {
+                        "product_id": pid,
+                        "product_name": chunk.product_name,
+                        "category": chunk.category,
+                        "components": set(),
+                        "total_chunks": 0,
+                    }
+                if chunk.component_name:
+                    products[pid]["components"].add(chunk.component_name)
+                products[pid]["total_chunks"] += 1
+
+            return [
+                {
+                    "product_id": p["product_id"],
+                    "product_name": p["product_name"],
+                    "category": p["category"],
+                    "components": sorted(list(p["components"])),
+                    "total_chunks": p["total_chunks"],
+                }
+                for p in products.values()
+            ]
 
         products: dict[str, dict[str, Any]] = {}
         try:
@@ -496,9 +645,17 @@ class VectorStoreManager:
         ]
 
     def delete_chunk(self, chunk_id: str) -> bool:
-        """Delete a specific chunk/DataObject from Vertex AI Vector Search."""
+        """Delete a specific chunk from vector store (local and cloud)."""
+        local_data = self._read_local_store()
+        deleted = False
+        if chunk_id in local_data:
+            del local_data[chunk_id]
+            self._write_local_store(local_data)
+            deleted = True
+
         if not self._data_client or not self.collection_name:
-            return False
+            return deleted
+
         try:
             name = f"{self.collection_name}/dataObjects/{chunk_id}"
             self._data_client.delete_data_object(name=name)
@@ -509,13 +666,22 @@ class VectorStoreManager:
             return False
 
     def delete_product(self, product_identifier: str) -> int:
-        """Delete all chunks/DataObjects associated with a specific product ID or product Name."""
-        if not self._search_client or not self._data_client or not self.collection_name:
-            logger.warning("Vector Search client or collection not initialized.")
-            return 0
-
+        """Delete all chunks associated with a specific product ID or product Name."""
         target = product_identifier.strip().lower()
-        deleted_count = 0
+        local_data = self._read_local_store()
+        to_del = [
+            k for k, item in local_data.items()
+            if target in item.get("chunk", {}).get("product_id", "").lower()
+            or target in item.get("chunk", {}).get("product_name", "").lower()
+        ]
+        for k in to_del:
+            del local_data[k]
+        if to_del:
+            self._write_local_store(local_data)
+        deleted_count = len(to_del)
+
+        if not self._search_client or not self._data_client or not self.collection_name:
+            return deleted_count
 
         try:
             req = vectorsearch_v1.QueryDataObjectsRequest(
@@ -542,8 +708,8 @@ class VectorStoreManager:
                     matching_objects.append(obj)
 
             if not matching_objects:
-                logger.info("No chunks found matching product '%s'.", product_identifier)
-                return 0
+                logger.info("No chunks found matching product '%s' in cloud.", product_identifier)
+                return deleted_count
 
             delete_requests = [
                 vectorsearch_v1.DeleteDataObjectRequest(name=obj.name)
@@ -557,33 +723,26 @@ class VectorStoreManager:
                     requests=batch,
                 )
                 self._data_client.batch_delete_data_objects(request=batch_req)
-                deleted_count += len(batch)
 
             logger.info(
                 "Deleted %d DataObjects for product '%s' from collection %s",
-                deleted_count,
+                len(matching_objects),
                 product_identifier,
                 self.collection_name,
             )
         except Exception as exc:
             logger.error("Failed to batch delete product '%s': %s", product_identifier, exc)
-            try:
-                for obj in matching_objects:
-                    try:
-                        self._data_client.delete_data_object(name=obj.name)
-                        deleted_count += 1
-                    except Exception:
-                        pass
-            except Exception:
-                pass
 
         return deleted_count
 
     def clear_collection(self) -> int:
-        """Delete all DataObjects from the Vertex AI Vector Search collection."""
+        """Delete all DataObjects from the vector store."""
+        local_data = self._read_local_store()
+        deleted_count = len(local_data)
+        self._write_local_store({})
+
         if not self._search_client or not self._data_client or not self.collection_name:
-            logger.warning("Vector Search client or collection not initialized.")
-            return 0
+            return deleted_count
 
         deleted_count = 0
         try:
