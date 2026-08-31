@@ -65,8 +65,7 @@ flowchart TB
     end
 
     subgraph ADK["Google ADK Agent Orchestration"]
-        RootAgent["Root Concierge Agent (diamond_cx_live_agent)"]
-        SubAgent["Dynamic Redressal Agent (dynamic_redressal_agent)"]
+        RootAgent["Unified Concierge & Diagnostic Agent (diamond_cx_live_agent)"]
         Runner["LiveAgentRunner / InMemoryRunner"]
     end
 
@@ -75,6 +74,7 @@ flowchart TB
         T_FAQ["query_product_knowledge"]
         T_Search["search_product_knowledge_base"]
         T_Comp["lookup_component_instructions"]
+        T_Refund["issue_order_refund_or_replacement"]
         T_Escalate["escalate_to_human_technician"]
     end
 
@@ -91,11 +91,8 @@ flowchart TB
     WS -->|Inbound Streams| Queue
     Queue -->|Live Events| Runner
     Runner --> RootAgent
-    RootAgent -.->|Delegates Technical Issues| SubAgent
 
     RootAgent --> Tools
-    SubAgent --> Tools
-
     T_Search --> VecMgr
     T_Comp --> VecMgr
     VecMgr --> EmbClient
@@ -279,34 +276,28 @@ The `VectorStoreManager` stores and retrieves all data directly from **Google Cl
 
 ```mermaid
 flowchart TD
-    Customer([Customer Inquiry]) --> Root[diamond_cx_live_agent\nRoot Concierge]
+    Customer([Customer Live Multimodal Inquiry]) --> Root[diamond_cx_live_agent\nUnified Concierge & Diagnostic Specialist]
     
-    Root -->|General FAQs / Order Lookup| ToolsRoot[Root Tools]
-    ToolsRoot --> T1[lookup_order_or_serial]
-    ToolsRoot --> T2[query_product_knowledge]
-    
-    Root -->|Technical Issues / Malfunctions| Delegate[Sub-Agent Delegation]
-    Delegate --> Redressal[dynamic_redressal_agent\nRedressal Specialist]
-    
-    Redressal --> ToolsRedressal[Redressal Tools]
-    ToolsRedressal --> T3[search_product_knowledge_base]
-    ToolsRedressal --> T4[lookup_component_instructions]
-    ToolsRedressal --> T5[escalate_to_human_technician]
+    Root -->|Order & Serial Lookup| T1[lookup_order_or_serial]
+    Root -->|Product Care & FAQs| T2[query_product_knowledge]
+    Root -->|Multimodal Vector Search| T3[search_product_knowledge_base]
+    Root -->|Component Operating Steps| T4[lookup_component_instructions]
+    Root -->|Verified Hardware Defect| T5[issue_order_refund_or_replacement]
+    Root -->|Field Technician Dispatch| T6[escalate_to_human_technician]
     
     T3 & T4 --> VectorSearch[VectorStoreManager Engine]
 ```
 
-### A. Primary Concierge vs. Dynamic Redressal Specialist
-1. **Root Concierge Agent (`diamond_cx_live_agent`)**:
-   - Manages order lookups, serial verification, warranty checks, and general product inquiries.
-   - Detects when the user is reporting a physical or technical problem with a product and delegates the session to the sub-agent.
-2. **Dynamic Redressal Agent (`dynamic_redressal_agent`)**:
-   - Instruction-tuned with a **"Bias Towards Auto-Resolution"**.
-   - Enforces **one-step-at-a-time** guided self-help (does not overwhelm customer with entire manuals at once).
-   - Diagnoses camera frames (LED blink patterns, LCD codes like `rST` or `E01`, switch positions).
-   - If troubleshooting fails or physical defect is confirmed, immediately invokes technician escalation.
+### A. Unified Concierge & Diagnostic Specialist Architecture
+The system employs a single, unified high-performance agent (`diamond_cx_live_agent` / `diamond_cx_agent`) that natively incorporates all concierge, order tracking, and technical diagnostic capabilities with **zero handoff latency**.
 
-### B. Tool Execution & Knowledge Extraction
+### B. Observant & Verification-First Protocol
+1. **Multimodal Visual Grounding**: Continuously inspects the live 1 FPS camera frames to visually verify component states, LED alphanumeric displays (`rST`, `E01`, `HOT`, `E04`), cable seating, and user button presses before proceeding.
+2. **Strict Step-by-Step Isolation**: Delivers exactly ONE actionable instruction at a time rather than overwhelming the customer with an entire procedure manual.
+3. **Verification & Ground-Truth Probing**: Probes for specific physical symptoms, sensory cues (e.g. audible relay clicks, number of beeps), and display codes that only an active user performing the step would know.
+4. **Anti-Bypass Guardrails**: Refuses unverified shortcut refund claims; requires verified diagnostic failure before executing high-impact redressal tools (`issue_order_refund_or_replacement`).
+
+### C. Tool Execution & Knowledge Extraction
 - [`search_product_knowledge_base`](file:///Users/aswath.s/Documents/personal/projects/diamond-cx/backend/app/tools.py#L189-L242): Queries the vector store with user query text and optional product/component filters. Returns matching chunks with similarity scores and actionable steps.
 - [`lookup_component_instructions`](file:///Users/aswath.s/Documents/personal/projects/diamond-cx/backend/app/tools.py#L244-L283): Direct component retrieval returning all associated buttons, states, and sequential operating steps.
 - [`escalate_to_human_technician`](file:///Users/aswath.s/Documents/personal/projects/diamond-cx/backend/app/tools.py#L289-L327): Registers a dispatch ticket `TECH-DISPATCH-XXXXXX` and provides customer confirmation.
