@@ -87,7 +87,9 @@ def create_app() -> FastAPI:
         app.mount("/static/sample_products", StaticFiles(directory=str(data_products_dir)), name="sample_products")
 
     frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
-    if frontend_dir.exists():
+    if (frontend_dir / "dist").exists():
+        app.mount("/app", StaticFiles(directory=str(frontend_dir / "dist"), html=True), name="frontend")
+    elif frontend_dir.exists():
         app.mount("/app", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
     # Convenience root endpoint
